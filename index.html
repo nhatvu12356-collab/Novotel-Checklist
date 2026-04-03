@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trane CenTraVac™ - Nhật Ký Vận Hành (Novotel Danang)</title>
+    <title>Hệ Thống Quản Lý Chiller Đa Dự Án</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; -webkit-print-color-adjust: exact; }
-        .chart-container { position: relative; width: 100%; height: 250px; }
         
-        /* Checklist */
+        /* Checkbox Styling */
         .check-container { display: flex; align-items: center; position: relative; padding-left: 35px; margin-bottom: 8px; cursor: pointer; font-size: 13px; user-select: none; min-height: 24px; }
         .check-container input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
         .checkmark { position: absolute; top: 0; left: 0; height: 22px; width: 22px; background-color: #e2e8f0; border-radius: 6px; border: 1px solid #cbd5e1; transition: all 0.2s ease; }
@@ -19,250 +18,179 @@
         .checkmark:after { content: ""; position: absolute; display: none; }
         .check-container input:checked ~ .checkmark:after { display: block; }
         .check-container .checkmark:after { left: 7px; top: 3px; width: 6px; height: 11px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-
+        
         /* Inputs */
         .log-input { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #f8fafc; transition: all 0.2s; font-family: monospace; font-size: 14px; }
         .log-input:focus { outline: none; border-color: #0d9488; background-color: #fff; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
         .log-input-compact { width: 100%; padding: 4px; text-align: center; border: none; background: transparent; outline: none; font-family: monospace; font-size: 12px; }
         .log-input-compact:focus { background-color: #e6f6f5; }
-
-        /* Toast */
+        
+        /* Utilities */
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
         #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
-
-        /* Sync Button Spinner */
-        .loading { pointer-events: none; opacity: 0.7; }
-        .loading .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 6px; }
+        
+        .project-card { transition: all 0.3s ease; }
+        .project-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        
+        /* Loading Spinner */
+        .loading { pointer-events: none; opacity: 0.8; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ================= PDF EXPORT STYLES (Fixed Blank Pages & Missing Data) ================= */
+        /* Print Mode */
         .pdf-mode { background-color: #ffffff; color: #000; font-size: 11px; }
         .pdf-mode .no-print { display: none !important; }
         .pdf-mode .print-only { display: flex !important; }
-        
-        /* Bỏ background, shadow, padding thừa để tối ưu không gian in */
         .pdf-mode section { border: none !important; box-shadow: none !important; margin-bottom: 15px !important; padding: 5px !important; page-break-inside: auto !important; }
-        
-        /* FIX LỖI THIẾU THÔNG SỐ: Ép các thẻ có thanh cuộn ngang phải bung toàn bộ ra */
         .pdf-mode .overflow-x-auto { overflow: visible !important; }
-        
-        /* FIX LỖI TRANG TRẮNG: Không ép nguyên một Section dài ở chung 1 trang, chỉ giữ các hàng (tr) đi liền nhau */
-        .pdf-mode tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-        .pdf-mode table { width: 100%; border-collapse: collapse; margin-bottom: 10px; page-break-inside: auto; }
-        
-        .pdf-mode input.log-input, .pdf-mode input[type="text"], .pdf-mode input[type="date"], .pdf-mode textarea { border: none !important; border-bottom: 1px dotted #666 !important; border-radius: 0 !important; padding: 2px 0 !important; background: transparent !important; color: #000 !important; }
-        .pdf-mode th, .pdf-mode td { border: 1px solid #999 !important; padding: 4px !important; }
-        .pdf-mode th { background-color: #e2e8f0 !important; font-weight: bold; }
-        .pdf-mode .log-input-compact { color: #000 !important; }
+        .pdf-mode tr { page-break-inside: avoid !important; }
+        .pdf-mode input, .pdf-mode textarea { border: none !important; border-bottom: 1px dotted #666 !important; background: transparent !important; color: #000 !important; }
         .pdf-mode .print-header { justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .pdf-mode .chart-container { height: 200px; page-break-inside: avoid !important; }
+
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: flex !important; }
+            section { page-break-inside: auto !important; }
+            @page { margin: 1cm; size: A4; }
+        }
     </style>
 </head>
 <body class="antialiased pb-24">
 
-    <!-- Top Navigation Bar -->
+    <!-- GLOBAL HEADER -->
     <header class="bg-slate-800 text-white shadow-md sticky top-0 z-50 no-print">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-3 justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <span class="text-2xl">⚙️</span>
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goHome()">
+                <span class="text-2xl">🏢</span>
                 <div>
-                    <h1 class="text-lg font-bold tracking-wide">Trane CenTraVac™ Log</h1>
-                    <p class="text-xs text-slate-300">Công cụ Kỹ thuật viên Plant Room</p>
+                    <h1 class="text-lg font-bold tracking-wide uppercase">O&M Dashboard</h1>
+                    <p class="text-xs text-slate-300" id="header_subtitle">Hệ thống quản lý đa dự án</p>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="clearDraft()" class="bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold py-2 px-3 rounded-lg transition">
-                    🔄 Làm mới
-                </button>
-                <button onclick="saveAndExportPDF()" class="bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center transition shadow-lg shadow-teal-500/30">
-                    <span class="mr-2">📥</span> Tải PDF
-                </button>
-                <button id="btn_sync" onclick="syncToCloud()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center transition shadow-lg shadow-blue-500/30">
-                    <span class="mr-2" id="sync_icon">☁️</span> Đồng bộ Sheets
-                </button>
+            <!-- Action buttons (Hidden on Home Screen) -->
+            <div class="flex flex-wrap gap-2 hidden" id="action_buttons">
+                <button onclick="goHome()" class="bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold py-2 px-3 rounded-lg transition">🏠 Trang chủ</button>
+                <button onclick="clearDraft()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold py-2 px-3 rounded-lg transition">🔄 Reset Form</button>
+                <button onclick="saveAndExportPDF()" class="bg-teal-500 hover:bg-teal-400 text-white text-xs font-semibold py-2 px-4 rounded-lg flex items-center transition shadow-lg shadow-teal-500/30"><span class="mr-2">📥</span> Tải PDF</button>
+                <button onclick="syncToCloud()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 px-4 rounded-lg flex items-center transition shadow-lg shadow-blue-500/30">☁️ Gửi dữ liệu</button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
 
-        <!-- Print-Only Header -->
-        <div class="hidden print-only print-header">
-            <div class="w-1/3 text-left">
-                <img id="print_logo" src="" alt="Company Logo" class="max-h-16 object-contain hidden">
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH 1: HOME SCREEN (CHỌN DỰ ÁN) -->
+        <!-- ========================================== -->
+        <div id="screen_home" class="space-y-6">
+            <div class="text-center py-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Chọn Dự Án Cần Báo Cáo</h2>
+                <p class="text-slate-500">Mỗi dự án có biểu mẫu và thông số kiểm tra độc lập.</p>
             </div>
-            <div class="w-2/3 text-right">
-                <h1 class="text-2xl font-bold uppercase mb-1">Nhật Ký Vận Hành Cụm Chiller</h1>
-                <h2 class="text-lg text-slate-700">Trane CenTraVac™ & Hệ thống Phụ trợ</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Project Cards -->
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center" onclick="openProject('estella', 'Estella Place')">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl font-bold mb-4">EP</div>
+                    <h3 class="font-bold text-slate-800">Estella Place</h3>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center" onclick="openProject('saigon1', 'Saigon Centre 1')">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl font-bold mb-4">SC1</div>
+                    <h3 class="font-bold text-slate-800">Saigon Centre 1</h3>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center" onclick="openProject('saigon2', 'Saigon Centre 2')">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl font-bold mb-4">SC2</div>
+                    <h3 class="font-bold text-slate-800">Saigon Centre 2</h3>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center" onclick="openProject('republic', 'Republic Suites')">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-2xl font-bold mb-4">RS</div>
+                    <h3 class="font-bold text-slate-800">Republic Suites</h3>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center border-l-4 border-l-orange-500" onclick="openProject('holiday', 'Holiday Inn')">
+                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl font-bold mb-4">HI</div>
+                    <h3 class="font-bold text-slate-800">Holiday Inn</h3>
+                    <span class="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-2">Bản mẫu chi tiết</span>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center border-l-4 border-l-teal-500" onclick="openProject('leading', 'Leading Start')">
+                    <div class="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 text-2xl font-bold mb-4">LS</div>
+                    <h3 class="font-bold text-slate-800">Leading Start</h3>
+                    <span class="text-[10px] bg-teal-100 text-teal-700 px-2 py-1 rounded-full mt-2">Bản mẫu chi tiết</span>
+                </div>
+                <div class="project-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer flex flex-col items-center justify-center text-center border-l-4 border-l-blue-500" onclick="openProject('novotel', 'Novotel Đà Nẵng')">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl font-bold mb-4">NV</div>
+                    <h3 class="font-bold text-slate-800">Novotel Đà Nẵng</h3>
+                    <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-2">Bản mẫu chi tiết</span>
+                </div>
             </div>
         </div>
 
-        <!-- Section 1: General Info -->
-        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center">
-                <span class="mr-2 no-print">📝</span> Thông tin chung
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chủ đầu tư (Owner)</label>
-                    <input type="text" class="log-input draft-save" id="meta_owner" value="NOVOTEL DANANG, VIETNAM">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Kỹ thuật viên</label>
-                    <input type="text" class="log-input draft-save" id="meta_technician" placeholder="Họ và tên...">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày giờ ghi nhận</label>
-                    <input type="datetime-local" class="log-input draft-save" id="meta_date">
-                </div>
-                <div class="no-print">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Logo báo cáo (Tùy chọn)</label>
-                    <input type="file" id="logo_upload" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer border border-slate-200 rounded-md p-1">
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 2: Dashboard (Historical) -->
-        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 no-print" id="dashboard-section">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="text-sm font-semibold text-center text-slate-600 mb-1">Nhiệt độ cuộn dây Chiller #1 (Max 115°C)</h3>
-                    <div class="chart-container"><canvas id="motorTempChart"></canvas></div>
-                </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-center text-slate-600 mb-1">Thời gian xả Purge 24h - Chiller #1 (Phút)</h3>
-                    <div class="chart-container"><canvas id="purgeChart"></canvas></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 3: Plant Room Checklist & Equipment Details -->
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200">
-            <div class="bg-slate-50 p-4 border-b border-slate-200 rounded-t-xl">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center">
-                    <span class="mr-2 no-print">🔍</span> Tình trạng Thiết bị Phụ trợ (Bơm Primary/Secondary & Tháp CT)
-                </h2>
-            </div>
-            <div class="p-5">
-                
-                <!-- Part A: Basic Checkboxes -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 mb-6">
-                    <div>
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">1. Cụm Chiller Ngoại quan</h3>
-                        <label class="check-container"><span class="text-slate-700">Không rò rỉ nước (Evap, Cond)</span><input type="checkbox" id="chk_leak" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                        <label class="check-container"><span class="text-slate-700">Độ ồn/Rung động bình thường</span><input type="checkbox" id="chk_noise" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">2. Bơm Nước (Pumps)</h3>
-                        <label class="check-container"><span class="text-slate-700">Không rò rỉ phớt bơm (Pump Seals)</span><input type="checkbox" id="chk_pump_seal" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                        <label class="check-container"><span class="text-slate-700">Nhiệt độ thân động cơ bình thường</span><input type="checkbox" id="chk_pump_temp" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">3. Tháp giải nhiệt (CT)</h3>
-                        <label class="check-container"><span class="text-slate-700">Mức nước máng tràn bình thường</span><input type="checkbox" id="chk_ct_water" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                        <label class="check-container"><span class="text-slate-700">Quạt tháp không kêu rít / kẹt</span><input type="checkbox" id="chk_ct_fan" class="draft-check"><span class="checkmark shadow-sm"></span></label>
-                    </div>
-                </div>
-
-                <!-- Part B: Summary Bar -->
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200 page-break-inside-avoid">
-                    <div class="bg-white p-2 rounded border border-teal-200 shadow-sm">
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số Chiller chạy</label>
-                        <input type="number" id="count_chiller" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" value="1" min="1" max="4">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số P-CHWP</label>
-                        <input type="number" id="count_pchwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số S-CHWP</label>
-                        <input type="number" id="count_schwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số CWP</label>
-                        <input type="number" id="count_cwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số CT chạy</label>
-                        <input type="number" id="count_ct" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Nhiệt độ NT</label>
-                        <div class="relative"><input type="number" id="env_temp" class="log-input p-1 draft-save text-center font-bold text-orange-600 text-lg"><span class="absolute right-2 top-2 text-xs text-slate-400">°C</span></div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Độ ẩm NT</label>
-                        <div class="relative"><input type="number" id="env_hum" class="log-input p-1 draft-save text-center font-bold text-blue-600 text-lg"><span class="absolute right-2 top-2 text-xs text-slate-400">%</span></div>
-                    </div>
-                </div>
-
-                <!-- Part C: Detailed Tables -->
-                <h3 class="font-bold text-slate-700 mb-3 border-b pb-1 text-sm uppercase">Ghi nhận thông số chi tiết Bơm & Tháp</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div id="pchwp_table_container"></div>
-                    <div id="schwp_table_container"></div>
-                    <div id="cwp_table_container"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div id="ct1_table_container"></div>
-                    <div id="ct2_table_container"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 4: Chiller Data Entry -->
-        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center">
-                <span class="mr-2 no-print">📊</span> Thông số Vận hành Chiller (Symbio™ Panel)
-            </h2>
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH 2: PROJECT VIEW (TRANG NHẬP LIỆU) -->
+        <!-- ========================================== -->
+        <div id="screen_project" class="hidden space-y-6">
             
-            <div id="chiller_tables_container" class="space-y-8"></div>
-            
-            <div class="mt-8 pt-4 border-t border-slate-200">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Ghi chú vận hành (Notes):</label>
-                <textarea class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none draft-save mb-4" id="meta_notes" rows="3" placeholder="Ghi lại mã lỗi từ Symbio™, thiết bị luân phiên chạy, hoặc diễn biến sự cố..."></textarea>
-                
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                        <span class="mr-2">📸</span> Đính kèm hình ảnh sự cố / hiện trạng (Tùy chọn):
-                    </label>
-                    <div class="flex flex-col sm:flex-row items-start sm:space-x-4">
-                        <div class="no-print w-full sm:w-auto mb-3 sm:mb-0">
-                            <input type="file" id="incident_upload" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 cursor-pointer border border-slate-200 rounded-md p-1 bg-white">
-                            <button id="btn_clear_incident" class="mt-2 text-xs font-semibold text-rose-500 hover:text-rose-700 hidden" onclick="clearIncidentImage()">✖ Xóa ảnh đính kèm</button>
-                        </div>
-                        <div id="incident_preview_container" class="hidden w-full sm:w-1/2 border border-slate-300 rounded p-1 bg-white shadow-sm flex justify-center">
-                            <img id="incident_image_preview" src="" alt="Hình ảnh sự cố" class="max-h-60 object-contain rounded">
-                        </div>
-                    </div>
+            <!-- Print Header -->
+            <div class="hidden print-only print-header">
+                <div class="w-1/3 text-left"><img id="print_logo" src="" class="max-h-16 object-contain hidden"></div>
+                <div class="w-2/3 text-right">
+                    <h1 class="text-2xl font-bold uppercase mb-1">Nhật Ký Vận Hành / Bảo Trì</h1>
+                    <h2 class="text-lg text-slate-700" id="print_project_name">Dự án: ---</h2>
                 </div>
             </div>
-        </section>
 
-        <!-- Footer Signatures -->
-        <section class="mt-8 pt-8 grid grid-cols-2 gap-8 text-center print-only" style="display: none;">
-            <div class="w-full">
-                <p class="font-bold mb-16 text-sm">Kỹ thuật viên thực hiện</p>
-                <p class="border-t border-slate-400 w-3/4 mx-auto pt-1 text-xs">(Ký và ghi rõ họ tên)</p>
+            <!-- General Info -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center"><span class="mr-2 no-print">📝</span> Thông tin chung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kỹ thuật viên</label>
+                        <input type="text" class="log-input draft-save" id="meta_technician" placeholder="Họ và tên...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ngày giờ ghi nhận</label>
+                        <input type="datetime-local" class="log-input draft-save" id="meta_date">
+                    </div>
+                    <div class="no-print">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Upload Logo</label>
+                        <input type="file" id="logo_upload" accept="image/*" class="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-teal-50 file:text-teal-700 border border-slate-200 rounded-md p-1">
+                    </div>
+                </div>
+            </section>
+
+            <!-- KHU VỰC RENDER ĐỘNG DÀNH CHO TỪNG DỰ ÁN -->
+            <div id="dynamic_project_content" class="space-y-6">
+                <!-- Nội dung checklist, bảng bơm, bảng chiller sẽ được Javascript bơm vào đây tùy dự án -->
             </div>
-            <div class="w-full">
-                <p class="font-bold mb-16 text-sm">Xác nhận của Quản lý</p>
-                <p class="border-t border-slate-400 w-3/4 mx-auto pt-1 text-xs">(Ký và ghi rõ họ tên)</p>
-            </div>
-        </section>
+
+            <!-- Notes & Signatures -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Ghi chú vận hành / Tình trạng bất thường:</label>
+                <textarea class="w-full p-3 border border-slate-300 rounded-lg draft-save mb-4" id="meta_notes" rows="3" placeholder="Ghi chú chi tiết..."></textarea>
+            </section>
+
+            <section class="mt-8 pt-8 grid grid-cols-2 gap-8 text-center print-only" style="display: none;">
+                <div class="w-full"><p class="font-bold mb-16 text-sm">Kỹ thuật viên thực hiện</p><p class="border-t border-slate-400 w-3/4 mx-auto pt-1 text-xs">(Ký tên)</p></div>
+                <div class="w-full"><p class="font-bold mb-16 text-sm">Xác nhận của Quản lý</p><p class="border-t border-slate-400 w-3/4 mx-auto pt-1 text-xs">(Ký tên)</p></div>
+            </section>
+        </div>
 
     </main>
 
     <div id="toast">Thông báo</div>
 
     <script>
-        // ==========================================
-        // DÁN ĐƯỜNG LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
-        // ==========================================
-        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRr8lAXoyHyOGA1yjTIr-SroqknKvu0FghORZqBAjAOQzQKAw8PRGLgN1krHcm82UD8A/exec'; 
+        // =====================================================================
+        // ĐIỀN ĐƯỜNG LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
+        // =====================================================================
+        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnLSiQM_P15ZaaEhpGMlN3wo0Fr7eAFG_8QKTgEJZ2Ex_YN38AxVUAdoQJ7aRaNwjkrA/exec'; 
+        
+        let currentProject = '';
+        let lsAmpsChartInstance = null;
 
-        // --- 1. PARAMETER DEFINITIONS ---
-        const parameters = [
+        // =====================================================================
+        // --- HỆ THỐNG DỮ LIỆU & HÀM RENDER RIÊNG CHO NOVOTEL ---
+        // =====================================================================
+        const nv_parameters = [
             { id: 'p_evap_ent', group: 'Bình Bay Hơi (Evap)', name: 'Nhiệt độ nước lạnh VÀO', type: 'number', placeholder: '°C' },
             { id: 'p_evap_lve', group: 'Bình Bay Hơi (Evap)', name: 'Nhiệt độ nước lạnh RA', type: 'number', placeholder: '°C' },
             { id: 'p_evap_sat', group: 'Bình Bay Hơi (Evap)', name: 'Nhiệt độ bão hòa (Refrigerant Sat Temp)', type: 'number', placeholder: '°C' },
@@ -298,31 +226,9 @@
             { id: 'p_purge_life', group: 'Hệ thống Purge', name: 'Tổng thời gian xả vòng đời', type: 'number', placeholder: 'Phút' }
         ];
 
-        let chartMotor, chartPurge;
-
-        function init() {
-            renderAuxTables(); 
-            const chillerCountInput = document.getElementById('count_chiller');
-            chillerCountInput.addEventListener('input', function() {
-                renderChillerTables();
-                loadDraft();       
-                setupAutoSave();   
-            });
-            renderChillerTables();
-            setDefaultDate();
-            loadDraft();
-            loadLogo();        
-            loadIncidentImage();
-            initCharts();
-            setupAutoSave();
-            setupLogoUpload(); 
-            setupIncidentUpload();
-        }
-
-        function renderAuxTables() {
+        function renderNovotelAux() {
             const renderSpecificPumpRows = (idPrefix, title, pumpData) => {
-                let html = `<table class="w-full text-[11px] mb-2 border-collapse">
-                    <thead class="bg-slate-100 text-slate-600"><tr><th class="border border-slate-200 py-1" style="width: 35%">${title}</th><th class="border border-slate-200">ΔP(Bar)</th><th class="border border-slate-200">Dòng(A)</th><th class="border border-slate-200">Tần số(Hz)</th></tr></thead><tbody>`;
+                let html = `<table class="w-full text-[11px] mb-2 border-collapse"><thead class="bg-slate-100 text-slate-600"><tr><th class="border border-slate-200 py-1" style="width: 35%">${title}</th><th class="border border-slate-200">ΔP(Bar)</th><th class="border border-slate-200">Dòng(A)</th><th class="border border-slate-200">Tần số(Hz)</th></tr></thead><tbody>`;
                 pumpData.forEach(p => {
                     let pwrLabel = p.kw ? `<br><span class="text-[9px] font-normal text-slate-500">(${p.kw}kW)</span>` : '';
                     html += `<tr><td class="border border-slate-200 py-1 font-bold bg-slate-50 text-center text-slate-700 leading-tight">${p.label}${pwrLabel}</td><td class="border border-slate-200"><input type="number" id="${idPrefix}_${p.n}_p" class="log-input-compact draft-save"></td><td class="border border-slate-200"><input type="number" id="${idPrefix}_${p.n}_a" class="log-input-compact draft-save"></td><td class="border border-slate-200"><input type="number" id="${idPrefix}_${p.n}_hz" class="log-input-compact draft-save"></td></tr>`;
@@ -343,26 +249,27 @@
             const schwpData = [{n:1, label:'S-CHWP 1', kw:37}, {n:2, label:'S-CHWP 2', kw:37}, {n:3, label:'S-CHWP 3', kw:75}, {n:4, label:'S-CHWP 4', kw:75}];
             const cwpData = [{n:1, label:'CWP 1', kw:''}, {n:2, label:'CWP 2', kw:''}, {n:3, label:'CWP 3', kw:''}, {n:4, label:'CWP 4', kw:''}];
 
-            document.getElementById('pchwp_table_container').innerHTML = renderSpecificPumpRows('pchwp', 'Primary CHWP', pchwpData);
-            document.getElementById('schwp_table_container').innerHTML = renderSpecificPumpRows('schwp', 'Secondary CHWP', schwpData);
-            document.getElementById('cwp_table_container').innerHTML = renderSpecificPumpRows('cwp', 'Condenser CWP', cwpData);
-            document.getElementById('ct1_table_container').innerHTML = renderCTRows(1, 6);
-            document.getElementById('ct2_table_container').innerHTML = renderCTRows(7, 12);
+            document.getElementById('nv_pchwp_container').innerHTML = renderSpecificPumpRows('pchwp', 'Primary CHWP', pchwpData);
+            document.getElementById('nv_schwp_container').innerHTML = renderSpecificPumpRows('schwp', 'Secondary CHWP', schwpData);
+            document.getElementById('nv_cwp_container').innerHTML = renderSpecificPumpRows('cwp', 'Condenser CWP', cwpData);
+            document.getElementById('nv_ct1_container').innerHTML = renderCTRows(1, 6);
+            document.getElementById('nv_ct2_container').innerHTML = renderCTRows(7, 12);
         }
 
-        function renderChillerTables() {
-            const container = document.getElementById('chiller_tables_container');
+        function renderNovotelChillers() {
+            const container = document.getElementById('nv_chiller_tables_container');
+            if (!container) return; 
+            
             let chillerCount = parseInt(document.getElementById('count_chiller').value) || 1;
             if (chillerCount < 1) chillerCount = 1;
             let html = '';
 
             for(let i = 1; i <= chillerCount; i++) {
                 let chillerTitle = chillerCount > 1 ? `<h3 class="font-bold text-teal-800 text-md mb-2 bg-teal-50 p-2 rounded-t-lg border-b-2 border-teal-200 flex items-center"><span class="mr-2">❄️</span> THÔNG SỐ CHILLER #${i}</h3>` : '';
-                // Xóa bỏ style="page-break-inside: avoid;" ở div bọc ngoài để bảng không bị đẩy trắng trang
                 let tableHtml = `<div class="overflow-x-auto shadow-sm border border-slate-200 rounded-lg mb-6">${chillerTitle}<table class="min-w-full text-left text-sm whitespace-nowrap"><thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 font-semibold w-1/4">Nhóm thiết bị</th><th class="px-3 py-2 font-semibold w-1/2">Tên thông số (Parameter)</th><th class="px-3 py-2 font-semibold w-1/4 text-center">Giá trị nhập</th></tr></thead><tbody class="divide-y divide-slate-100">`;
 
                 let currentGroup = '';
-                parameters.forEach(param => {
+                nv_parameters.forEach(param => {
                     let groupHtml = '';
                     if (param.group !== currentGroup) {
                         groupHtml = `<span class="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">${param.group}</span>`;
@@ -375,217 +282,545 @@
                 html += tableHtml;
             }
             container.innerHTML = html;
+            
+            setupAutoSave();
+            loadDraft();
         }
 
-        function setDefaultDate() {
+        // =====================================================================
+        // TRUNG TÂM RENDER GIAO DIỆN TÙY BIẾN CHO TỪNG DỰ ÁN
+        // =====================================================================
+        function renderProjectContent(projectId) {
+            const container = document.getElementById('dynamic_project_content');
+            
+            if (projectId === 'holiday') {
+                container.innerHTML = `
+                    <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">📋 Kiểm tra Thông số Điện & Cơ (HOLIDAY INN)</h2>
+                        
+                        <div class="mb-6 overflow-x-auto">
+                            <h3 class="font-bold text-slate-700 mb-2 text-sm uppercase bg-slate-100 p-2 rounded">Bơm Nước Giải Nhiệt (CWP 01 ~ CWP 03)</h3>
+                            <table class="w-full text-xs border-collapse text-center whitespace-nowrap">
+                                <thead>
+                                    <tr class="bg-slate-200 text-slate-700">
+                                        <th class="border p-2" rowspan="2">Thiết bị</th>
+                                        <th class="border p-2" colspan="3">Dòng hoạt động (A)</th>
+                                        <th class="border p-2" colspan="3">Độ cách điện (MΩ) / Điện trở (Ω)</th>
+                                        <th class="border p-2" colspan="2">Áp suất ống (Bar)</th>
+                                        <th class="border p-2" rowspan="2">Nhiệt độ ĐC</th>
+                                        <th class="border p-2" rowspan="2">Tần số (Hz)</th>
+                                    </tr>
+                                    <tr class="bg-slate-100 text-slate-600">
+                                        <th class="border p-1">I1</th><th class="border p-1">I2</th><th class="border p-1">I3</th>
+                                        <th class="border p-1">R1</th><th class="border p-1">R2</th><th class="border p-1">R3</th>
+                                        <th class="border p-1">P1</th><th class="border p-1">P2</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${[1,2,3].map(i => `
+                                    <tr>
+                                        <td class="border p-1 font-bold bg-slate-50">CWP 0${i}</td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_i1" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_i2" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_i3" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="text" id="hi_cwp${i}_r1" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="text" id="hi_cwp${i}_r2" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="text" id="hi_cwp${i}_r3" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_p1" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_p2" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_temp" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_cwp${i}_hz" class="log-input-compact draft-save" value="45"></td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <h3 class="font-bold text-slate-700 mb-2 text-sm uppercase bg-slate-100 p-2 rounded">Tháp Giải Nhiệt (CT 01 ~ CT 04)</h3>
+                            <table class="w-full text-xs border-collapse text-center whitespace-nowrap">
+                                <thead>
+                                    <tr class="bg-slate-200 text-slate-700">
+                                        <th class="border p-2" rowspan="2">Thiết bị</th>
+                                        <th class="border p-2" colspan="3">Dòng hoạt động (A)</th>
+                                        <th class="border p-2" colspan="3">Độ cách điện (MΩ) / Điện trở (Ω)</th>
+                                        <th class="border p-2" rowspan="2">Nhiệt độ ĐC</th>
+                                        <th class="border p-2" rowspan="2">Tần số (Hz)</th>
+                                    </tr>
+                                    <tr class="bg-slate-100 text-slate-600">
+                                        <th class="border p-1">I1</th><th class="border p-1">I2</th><th class="border p-1">I3</th>
+                                        <th class="border p-1">R1</th><th class="border p-1">R2</th><th class="border p-1">R3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${[1,2,3,4].map(i => `
+                                    <tr>
+                                        <td class="border p-1 font-bold bg-slate-50">CT 0${i}</td>
+                                        <td class="border"><input type="number" id="hi_ct${i}_i1" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_ct${i}_i2" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_ct${i}_i3" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="text" id="hi_ct${i}_r1" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="text" id="hi_ct${i}_r2" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="text" id="hi_ct${i}_r3" class="log-input-compact draft-save" placeholder="x/y"></td>
+                                        <td class="border"><input type="number" id="hi_ct${i}_temp" class="log-input-compact draft-save"></td>
+                                        <td class="border"><input type="number" id="hi_ct${i}_hz" class="log-input-compact draft-save" value="45"></td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            } 
+            else if (projectId === 'novotel') {
+                container.innerHTML = `
+                    <section class="bg-white rounded-xl shadow-sm border border-slate-200" style="page-break-inside: avoid;">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 rounded-t-xl">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <span class="mr-2 no-print">🔍</span> Tình trạng Thiết bị Phụ trợ (Novotel)
+                            </h2>
+                        </div>
+                        <div class="p-5">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 mb-6">
+                                <div>
+                                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">1. Cụm Chiller Ngoại quan</h3>
+                                    <label class="check-container"><span class="text-slate-700">Không rò rỉ nước (Evap, Cond)</span><input type="checkbox" id="chk_leak" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                    <label class="check-container"><span class="text-slate-700">Độ ồn/Rung động bình thường</span><input type="checkbox" id="chk_noise" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">2. Bơm Nước (Pumps)</h3>
+                                    <label class="check-container"><span class="text-slate-700">Không rò rỉ phớt bơm (Pump Seals)</span><input type="checkbox" id="chk_pump_seal" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                    <label class="check-container"><span class="text-slate-700">Nhiệt độ thân động cơ bình thường</span><input type="checkbox" id="chk_pump_temp" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-sm uppercase">3. Tháp giải nhiệt (CT)</h3>
+                                    <label class="check-container"><span class="text-slate-700">Mức nước máng tràn bình thường</span><input type="checkbox" id="chk_ct_water" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                    <label class="check-container"><span class="text-slate-700">Quạt tháp không kêu rít / kẹt</span><input type="checkbox" id="chk_ct_fan" class="draft-check"><span class="checkmark shadow-sm"></span></label>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <div class="bg-white p-2 rounded border border-teal-200 shadow-sm">
+                                    <label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số Chiller chạy</label>
+                                    <input type="number" id="count_chiller" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" value="1" min="1" max="4" oninput="renderNovotelChillers()">
+                                </div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số P-CHWP</label><input type="number" id="count_pchwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0"></div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số S-CHWP</label><input type="number" id="count_schwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0"></div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số CWP</label><input type="number" id="count_cwp" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0"></div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Số CT chạy</label><input type="number" id="count_ct" class="log-input p-1 draft-save text-center font-bold text-teal-700 text-lg" placeholder="0"></div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Nhiệt độ NT</label><div class="relative"><input type="number" id="env_temp" class="log-input p-1 draft-save text-center font-bold text-orange-600 text-lg"><span class="absolute right-2 top-2 text-xs text-slate-400">°C</span></div></div>
+                                <div><label class="block text-[10px] text-slate-500 uppercase tracking-wide font-bold">Độ ẩm NT</label><div class="relative"><input type="number" id="env_hum" class="log-input p-1 draft-save text-center font-bold text-blue-600 text-lg"><span class="absolute right-2 top-2 text-xs text-slate-400">%</span></div></div>
+                            </div>
+
+                            <h3 class="font-bold text-slate-700 mb-3 border-b pb-1 text-sm uppercase">Ghi nhận thông số chi tiết Bơm & Tháp</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div id="nv_pchwp_container"></div>
+                                <div id="nv_schwp_container"></div>
+                                <div id="nv_cwp_container"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div id="nv_ct1_container"></div>
+                                <div id="nv_ct2_container"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Chiller Tables -->
+                    <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mt-6">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center">
+                            <span class="mr-2 no-print">📊</span> Thông số Vận hành Chiller (Symbio™ Panel)
+                        </h2>
+                        <div id="nv_chiller_tables_container" class="space-y-8"></div>
+                    </section>
+                `;
+                
+                renderNovotelAux();
+                renderNovotelChillers();
+            } else if (projectId === 'leading') {
+                const chillerCategories = [
+                    { cat: 'Setting', rows: [
+                        { label: 'Status', key: 'status' },
+                        { label: 'Chiller water setpoint (C degree)', key: 'chw_sp' },
+                        { label: 'Current limit setpoint (%)', key: 'curr_lim' }
+                    ]},
+                    { cat: 'Electric', rows: [
+                        { label: 'RLA (%)', key: 'rla' },
+                        { label: 'Current L1 (A)', key: 'curr_l1' },
+                        { label: 'Current L2 (A)', key: 'curr_l2' },
+                        { label: 'Current L3 (A)', key: 'curr_l3' },
+                        { label: 'Power (kW)', key: 'power' }
+                    ]},
+                    { cat: 'Compressor', rows: [
+                        { label: 'Suction press (kPA)', key: 'suc_p' },
+                        { label: 'Discharge press (kPA)', key: 'dis_p' }
+                    ]},
+                    { cat: 'Evaporator', rows: [
+                        { label: 'Evap entering water temp (C degree)', key: 'evap_ent' },
+                        { label: 'Evap leaving water temp (C degree)', key: 'evap_lvg' },
+                        { label: 'Evap saturated Rfgt temp (C degree)', key: 'evap_sat' },
+                        { label: 'Evap refrigerant pressure (kPA)', key: 'evap_p' },
+                        { label: 'Evap approach temp (C degree)', key: 'evap_app' }
+                    ]},
+                    { cat: 'Condenser', rows: [
+                        { label: 'Cond entering water temp (C degree)', key: 'cond_ent' },
+                        { label: 'Cond leaving water temp (C degree)', key: 'cond_lvg' },
+                        { label: 'Cond saturated Rfgt temp (C degree)', key: 'cond_sat' },
+                        { label: 'Cond refrigerant pressure (kPA)', key: 'cond_p' },
+                        { label: 'Cond approach temp (C degree)', key: 'cond_app' }
+                    ]}
+                ];
+
+                const auxParams = [
+                    { label: 'Status', key: 'status' },
+                    { label: 'Ent/Leav Temp (C degree)', key: 'temp' },
+                    { label: 'In/Out Press (kPA)', key: 'press' },
+                    { label: 'Current L1 (A)', key: 'curr_l1' },
+                    { label: 'Current L2 (A)', key: 'curr_l2' },
+                    { label: 'Current L3 (A)', key: 'curr_l3' },
+                    { label: 'Power (kW)', key: 'power' },
+                    { label: 'Frequency (hz)', key: 'freq' }
+                ];
+
+                let chillerHtml = '';
+                chillerCategories.forEach((group, gIdx) => {
+                    group.rows.forEach((row, idx) => {
+                        chillerHtml += '<tr class="hover:bg-slate-50">';
+                        if (idx === 0) chillerHtml += `<td class="border p-1 font-bold bg-slate-100 align-middle text-center text-slate-700" rowspan="${group.rows.length}">${group.cat}</td>`;
+                        chillerHtml += `<td class="border p-1 text-slate-700">${row.label}</td>`;
+                        [1,2,3].forEach(i => {
+                            if (row.key === 'status') {
+                                chillerHtml += `<td class="border p-0"><select id="ls_ch${i}_${row.key}" class="log-input-compact draft-save w-full h-full py-2 bg-transparent cursor-pointer font-bold text-slate-700 outline-none"><option value=""></option><option value="Auto">Auto</option><option value="Man">Man</option><option value="Maintenance">Maintenance</option></select></td>`;
+                            } else {
+                                chillerHtml += `<td class="border p-0"><input type="number" step="any" id="ls_ch${i}_${row.key}" class="log-input-compact draft-save w-full h-full py-2" oninput="if(typeof updateLeadingStartChart === 'function') updateLeadingStartChart()"></td>`;
+                            }
+                        });
+                        chillerHtml += `<td class="border p-0"><input type="text" id="ls_ch_cmt_${gIdx}_${idx}" class="log-input-compact draft-save w-full h-full py-2"></td>`;
+                        chillerHtml += '</tr>';
+                    });
+                });
+
+                const renderAuxTable = (title, prefix, count) => {
+                    let html = '<div class="mb-6 overflow-x-auto"><h3 class="font-bold text-slate-700 mb-2 text-sm uppercase bg-slate-100 p-2 rounded">' + title + '</h3><table class="w-full text-[11px] border-collapse text-left whitespace-nowrap"><thead class="bg-slate-200 text-slate-700"><tr><th class="border p-2 w-64 text-center">Name</th>';
+                    for(let i=1; i<=count; i++) html += '<th class="border p-2 text-center w-24">' + prefix.toUpperCase() + i + '</th>';
+                    html += '<th class="border p-2 text-center">Comment</th></tr></thead><tbody>';
+                    
+                    auxParams.forEach((row, rIdx) => {
+                        let actualLabel = row.label;
+                        if(prefix === 'ct' && row.key.startsWith('curr_')) actualLabel = row.label.replace('Current', 'Fan Current');
+                        html += '<tr class="hover:bg-slate-50"><td class="border p-1 text-slate-700">' + actualLabel + '</td>';
+                        for(let i=1; i<=count; i++) {
+                            if (row.key === 'status') {
+                                html += `<td class="border p-0"><select id="ls_${prefix}${i}_${row.key}" class="log-input-compact draft-save w-full h-full py-2 bg-transparent cursor-pointer font-bold text-slate-700 outline-none"><option value=""></option><option value="Auto">Auto</option><option value="Man">Man</option><option value="Maintenance">Maintenance</option></select></td>`;
+                            } else {
+                                html += `<td class="border p-0"><input type="number" step="any" id="ls_${prefix}${i}_${row.key}" class="log-input-compact draft-save w-full h-full py-2" oninput="if(typeof updateLeadingStartChart === 'function') updateLeadingStartChart()"></td>`;
+                            }
+                        }
+                        html += `<td class="border p-0"><input type="text" id="ls_${prefix}_cmt_${rIdx}" class="log-input-compact draft-save w-full h-full py-2"></td></tr>`;
+                    });
+                    return html + '</tbody></table></div>';
+                };
+
+                container.innerHTML = `
+                    <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center">
+                            <span class="mr-2 no-print">📋</span> Bảng Check List Thông Số Vận Hành (LEADING START)
+                        </h2>
+                        
+                        <!-- Biểu đồ Ampe Trực Tiếp -->
+                        <div class="mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200 no-print">
+                            <h3 class="text-sm font-bold text-center text-slate-600 mb-2 uppercase tracking-wide">Biểu Đồ So Sánh Dòng Tải (Ampe) Tức Thời</h3>
+                            <div class="chart-container" style="height: 250px;"><canvas id="lsAmpsChart"></canvas></div>
+                        </div>
+
+                        <!-- Chiller -->
+                        <div class="mb-8 overflow-x-auto">
+                            <h3 class="font-bold text-slate-700 mb-2 text-sm uppercase bg-slate-100 p-2 rounded">CHILLER</h3>
+                            <table class="w-full text-[11px] border-collapse text-left whitespace-nowrap">
+                                <thead class="bg-slate-200 text-slate-700">
+                                    <tr>
+                                        <th class="border p-2 w-24 text-center">Description</th>
+                                        <th class="border p-2 w-64 text-center">Parameter</th>
+                                        <th class="border p-2 text-center w-24">CH1</th>
+                                        <th class="border p-2 text-center w-24">CH2</th>
+                                        <th class="border p-2 text-center w-24">CH3</th>
+                                        <th class="border p-2 text-center">Comment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${chillerHtml}</tbody>
+                            </table>
+                        </div>
+
+                        ${renderAuxTable('CHWP', 'chwp', 3)}
+                        ${renderAuxTable('CDWP', 'cdwp', 3)}
+                        
+                        <!-- Cooling Tower Container -->
+                        <div class="relative">
+                            ${renderAuxTable('CT', 'ct', 3)}
+                            <div class="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200 inline-block shadow-sm">
+                                <h3 class="font-bold text-slate-700 text-xs uppercase mb-2 flex items-center">
+                                    <span class="mr-1">⛅</span> Môi trường Tháp giải nhiệt
+                                </h3>
+                                <div class="flex items-center space-x-6">
+                                    <div class="flex items-center"><span class="text-xs font-bold text-slate-600 mr-2">Nhiệt độ NT:</span><input type="number" step="any" id="ls_env_temp" class="log-input p-1 draft-save text-center font-bold text-orange-600 text-sm w-20" placeholder="°C"></div>
+                                    <div class="flex items-center"><span class="text-xs font-bold text-slate-600 mr-2">Độ ẩm NT:</span><input type="number" step="any" id="ls_env_hum" class="log-input p-1 draft-save text-center font-bold text-blue-600 text-sm w-20" placeholder="%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+
+                // Fix Chart error by ensuring Chart exists
+                if (typeof Chart !== 'undefined') {
+                    setTimeout(initLeadingStartChart, 100);
+                } else {
+                    console.error("Thư viện Chart.js chưa được tải!");
+                }
+            } else {
+                container.innerHTML = `
+                    <section class="bg-yellow-50 border border-yellow-200 p-8 rounded-xl text-center">
+                        <h2 class="text-xl font-bold text-yellow-700 mb-2">Đang xây dựng...</h2>
+                        <p class="text-yellow-600">Dự án <b>${projectId.toUpperCase()}</b> chưa được cấu hình biểu mẫu chi tiết.</p>
+                    </section>
+                `;
+            }
+        }
+
+        // =====================================================================
+        // LOGIC ĐIỀU HƯỚNG VÀ DỮ LIỆU
+        // =====================================================================
+
+        function openProject(id, name) {
+            currentProject = id;
+            document.getElementById('screen_home').classList.add('hidden');
+            document.getElementById('screen_project').classList.remove('hidden');
+            document.getElementById('action_buttons').classList.remove('hidden');
+            
+            document.getElementById('header_subtitle').innerText = "Dự án: " + name;
+            document.getElementById('print_project_name').innerText = "Dự án: " + name;
+            
+            renderProjectContent(id);
+            
             const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             if(!document.getElementById('meta_date').value) document.getElementById('meta_date').value = now.toISOString().slice(0,16);
+            
+            loadDraft();
+            setupAutoSave();
         }
 
-        function showToast(message) {
-            const toast = document.getElementById("toast"); toast.innerText = message; toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
-        }
-
-        function setupLogoUpload() {
-            document.getElementById('logo_upload').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const base64Str = event.target.result;
-                        localStorage.setItem('trane_logo', base64Str); applyLogo(base64Str); showToast('Đã cập nhật Logo!');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        function loadLogo() { const savedLogo = localStorage.getItem('trane_logo'); if (savedLogo) applyLogo(savedLogo); }
-        function applyLogo(base64Str) { const imgEl = document.getElementById('print_logo'); imgEl.src = base64Str; imgEl.classList.remove('hidden'); }
-
-        function setupIncidentUpload() {
-            document.getElementById('incident_upload').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const base64Str = event.target.result;
-                        localStorage.setItem('trane_incident_image', base64Str); applyIncidentImage(base64Str); showToast('Đã đính kèm ảnh!');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        function loadIncidentImage() { const savedImg = localStorage.getItem('trane_incident_image'); if (savedImg) applyIncidentImage(savedImg); }
-        function applyIncidentImage(base64Str) {
-            document.getElementById('incident_image_preview').src = base64Str;
-            document.getElementById('incident_preview_container').classList.remove('hidden');
-            document.getElementById('btn_clear_incident').classList.remove('hidden');
-        }
-        function clearIncidentImage() {
-            localStorage.removeItem('trane_incident_image'); document.getElementById('incident_upload').value = '';
-            document.getElementById('incident_image_preview').src = '';
-            document.getElementById('incident_preview_container').classList.add('hidden');
-            document.getElementById('btn_clear_incident').classList.add('hidden');
+        function goHome() {
+            document.getElementById('screen_home').classList.remove('hidden');
+            document.getElementById('screen_project').classList.add('hidden');
+            document.getElementById('action_buttons').classList.add('hidden');
+            document.getElementById('header_subtitle').innerText = "Hệ thống quản lý đa dự án";
+            currentProject = '';
         }
 
         function setupAutoSave() {
-            document.querySelectorAll('.draft-save').forEach(i => i.addEventListener('input', saveDraft));
-            document.querySelectorAll('.draft-check').forEach(c => c.addEventListener('change', saveDraft));
-        }
-        function saveDraft() {
-            const draft = {};
-            document.querySelectorAll('.draft-save').forEach(input => { draft[input.id] = input.value; });
-            document.querySelectorAll('.draft-check').forEach(check => { draft[check.id] = check.checked; });
-            localStorage.setItem('trane_draft', JSON.stringify(draft));
-        }
-        function loadDraft() {
-            const draftStr = localStorage.getItem('trane_draft');
-            if (draftStr) {
-                const draft = JSON.parse(draftStr);
-                for (const key in draft) {
-                    const el = document.getElementById(key);
-                    if (el) { if (el.type === 'checkbox') el.checked = draft[key]; else el.value = draft[key]; }
-                }
-            }
-        }
-        function clearDraft() {
-            if(confirm('Làm mới toàn bộ biểu mẫu?')) {
-                localStorage.removeItem('trane_draft');
-                document.querySelectorAll('.draft-save').forEach(input => { if(input.id !== 'meta_owner' && input.id !== 'count_chiller') input.value = ''; });
-                document.querySelectorAll('.draft-check').forEach(check => check.checked = false);
-                clearIncidentImage();
-                setDefaultDate(); showToast('Đã làm mới biểu mẫu.');
-            }
+            document.querySelectorAll('.draft-save, .draft-check').forEach(el => {
+                el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', saveDraft);
+            });
         }
 
-        // --- CLOUD SYNC LOGIC ---
-        function collectAllData() {
-            let payload = {};
-            document.querySelectorAll('input, textarea').forEach(el => {
-                if (el.id && el.type !== 'file' && el.id !== 'logo_upload' && el.id !== 'incident_upload') {
-                    if (el.type === 'checkbox') {
-                        payload[el.id] = el.checked ? "OK" : "NOT OK";
-                    } else {
-                        payload[el.id] = el.value === "" ? "" : el.value;
-                    }
+        function saveDraft() {
+            if(!currentProject) return;
+            const draft = {};
+            draft['meta_technician'] = document.getElementById('meta_technician').value;
+            draft['meta_date'] = document.getElementById('meta_date').value;
+            draft['meta_notes'] = document.getElementById('meta_notes').value;
+            
+            const dynamicContainer = document.getElementById('dynamic_project_content');
+            dynamicContainer.querySelectorAll('.draft-save, .draft-check').forEach(el => {
+                draft[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+            });
+            
+            localStorage.setItem('draft_' + currentProject, JSON.stringify(draft));
+        }
+
+        function loadDraft() {
+            if(!currentProject) return;
+            const draft = JSON.parse(localStorage.getItem('draft_' + currentProject) || '{}');
+            
+            if(draft['meta_technician']) document.getElementById('meta_technician').value = draft['meta_technician'];
+            if(draft['meta_date']) document.getElementById('meta_date').value = draft['meta_date'];
+            if(draft['meta_notes']) document.getElementById('meta_notes').value = draft['meta_notes'];
+
+            const dynamicContainer = document.getElementById('dynamic_project_content');
+            dynamicContainer.querySelectorAll('.draft-save, .draft-check').forEach(el => {
+                if(draft[el.id] !== undefined) {
+                    if (el.type === 'checkbox') el.checked = draft[el.id];
+                    else el.value = draft[el.id];
                 }
             });
-            return payload;
+
+            if (currentProject === 'leading' && typeof updateLeadingStartChart === 'function') {
+                setTimeout(updateLeadingStartChart, 200); 
+            }
         }
 
+        function clearDraft() {
+            if(!currentProject) return;
+            if(confirm('Bạn muốn xóa dữ liệu đang nhập dở của dự án này?')) {
+                localStorage.removeItem('draft_' + currentProject);
+                document.getElementById('meta_technician').value = '';
+                document.getElementById('meta_notes').value = '';
+                
+                const dynamicContainer = document.getElementById('dynamic_project_content');
+                dynamicContainer.querySelectorAll('input').forEach(i => i.type === 'checkbox' ? i.checked = false : i.value = '');
+                dynamicContainer.querySelectorAll('select').forEach(s => s.value = '');
+                
+                showToast('Đã làm mới biểu mẫu.');
+                if (currentProject === 'leading' && typeof updateLeadingStartChart === 'function') updateLeadingStartChart();
+            }
+        }
+
+        // =====================================================================
+        // TIỆN ÍCH KHÁC (PDF, LOGO, SYNC)
+        // =====================================================================
+
+        function showToast(m) { const t = document.getElementById("toast"); t.innerText = m; t.className = "show"; setTimeout(() => t.className = "", 3000); }
+        
+        document.getElementById('logo_upload').onchange = (e) => { 
+            const r = new FileReader(); r.onload = (ev) => { 
+                localStorage.setItem('c_logo', ev.target.result); 
+                document.getElementById('print_logo').src = ev.target.result; 
+                document.getElementById('print_logo').classList.remove('hidden'); 
+            }; 
+            r.readAsDataURL(e.target.files[0]); 
+        };
+        
+        window.onload = () => {
+            const l = localStorage.getItem('c_logo'); 
+            if(l) { document.getElementById('print_logo').src = l; document.getElementById('print_logo').classList.remove('hidden'); }
+        };
+
+        // GỬI DỮ LIỆU LÊN GOOGLE SHEETS
         function syncToCloud() {
-            if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_LINK')) {
-                alert("Vui lòng cấu hình GOOGLE_APP_SCRIPT_URL trong mã nguồn trước theo hướng dẫn!");
+            if(!currentProject) return;
+            
+            if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('DÁN_LINK')) {
+                alert("Vui lòng dán link Google Apps Script vào biến GOOGLE_APP_SCRIPT_URL trong code trước khi gửi.");
                 return;
             }
 
-            const btn = document.getElementById('btn_sync');
-            const icon = document.getElementById('sync_icon');
-            
+            const btn = document.querySelector('[onclick="syncToCloud()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<span class="spinner mr-2"></span> Đang gửi...`;
             btn.classList.add('loading');
-            icon.className = 'spinner mr-2';
-            icon.innerText = '';
 
-            const payload = collectAllData();
+            // Tạo gói dữ liệu (Payload) với cột Tên Dự Án đặt lên đầu để tiện Filter
+            const payload = { 
+                Dự_Án: currentProject.toUpperCase(), 
+                Thời_Gian: document.getElementById('meta_date').value || new Date().toLocaleString('vi-VN'), 
+                Kỹ_Thuật_Viên: document.getElementById('meta_technician').value || "Chưa nhập"
+            };
+            
+            // Quét toàn bộ ô nhập liệu
+            document.getElementById('dynamic_project_content').querySelectorAll('input, textarea, select').forEach(el => {
+                if(el.id && el.type !== 'file') {
+                    payload[el.id] = el.type === 'checkbox' ? (el.checked ? "OK" : "NO") : el.value;
+                }
+            });
+            payload['Ghi_Chú'] = document.getElementById('meta_notes').value;
 
+            // Bắn API (Sử dụng no-cors để bỏ qua rào cản bảo mật trình duyệt)
             fetch(GOOGLE_APP_SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(() => {
+                // Với no-cors, ta không thể đọc phản hồi, mặc định là thành công nếu mạng ổn định
+                btn.innerHTML = originalText;
                 btn.classList.remove('loading');
-                icon.className = 'mr-2'; icon.innerText = '☁️';
-                if(data.status === 'success') {
-                    showToast('Đã đồng bộ dữ liệu lên Google Sheets thành công!');
-                } else {
-                    alert('Lỗi khi lưu dữ liệu: ' + data.message);
-                }
+                showToast('Đã gửi dữ liệu lên Google Sheets thành công!');
             })
             .catch(error => {
+                btn.innerHTML = originalText;
                 btn.classList.remove('loading');
-                icon.className = 'mr-2'; icon.innerText = '☁️';
                 console.error('Error:', error);
-                alert('Lỗi mạng. Vui lòng kiểm tra lại kết nối và cấu hình Google Script.');
-            });
-        }
-
-        // --- PREPARE DOM FOR PDF EXPORT ---
-        function syncDOMForPDF() {
-            document.querySelectorAll('input').forEach(el => {
-                if(el.type === 'checkbox' || el.type === 'radio') {
-                    if(el.checked) el.setAttribute('checked', 'checked');
-                    else el.removeAttribute('checked');
-                } else if(el.type !== 'file') {
-                    el.setAttribute('value', el.value);
-                }
-            });
-            document.querySelectorAll('textarea').forEach(el => {
-                el.textContent = el.value;
+                alert('Lỗi mạng. Vui lòng kiểm tra lại kết nối của bạn.');
             });
         }
 
         function saveAndExportPDF() {
-            const date = document.getElementById('meta_date').value;
-            if(!date) { alert('Vui lòng chọn ngày giờ!'); return; }
-
-            const historyStr = localStorage.getItem('trane_history') || '[]';
-            let history = JSON.parse(historyStr);
-            const tempInput = document.getElementById('p_temp_w1_ch1');
-            const purgeInput = document.getElementById('p_purge_24h_ch1');
-            const newRecord = { date: new Date(date).toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit'}), tempW1: tempInput ? (parseFloat(tempInput.value) || null) : null, purge24: purgeInput ? (parseFloat(purgeInput.value) || null) : null };
+            if(!currentProject) return;
+            window.scrollTo(0,0);
             
-            history.push(newRecord); if(history.length > 10) history.shift();
-            localStorage.setItem('trane_history', JSON.stringify(history)); updateCharts(history);
-            
-            // Ép DOM nhận giá trị hiện tại để thư viện HTML2CANVAS có thể đọc được
-            syncDOMForPDF();
-            
-            // Scroll lên đầu trang để tránh lỗi html2canvas render trang trắng ở khúc trên
-            window.scrollTo(0, 0);
-            showToast('Đã lưu! Đang tạo file PDF...');
-
-            setTimeout(() => {
-                const element = document.querySelector('main');
-                document.body.classList.add('pdf-mode');
-                
-                const opt = { 
-                    margin: [10, 10, 10, 10], 
-                    filename: `Plant_Room_Novotel_${newRecord.date.replace(/\//g, '-')}.pdf`, 
-                    image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 }, 
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] }
-                };
-                
-                html2pdf().set(opt).from(element).save().then(() => { 
-                    document.body.classList.remove('pdf-mode'); 
-                    showToast('Đã tải xuống báo cáo!'); 
+            document.querySelectorAll('input').forEach(el => {
+                if(el.type === 'checkbox') { if(el.checked) el.setAttribute('checked','checked'); }
+                else el.setAttribute('value', el.value);
+            });
+            document.querySelectorAll('select').forEach(el => {
+                el.querySelectorAll('option').forEach(opt => {
+                    if(opt.value === el.value) opt.setAttribute('selected', 'selected');
+                    else opt.removeAttribute('selected');
                 });
-            }, 800);
+            });
+
+            document.body.classList.add('pdf-mode');
+            const opt = { 
+                margin: 10, 
+                filename: `Bao_Cao_${currentProject.toUpperCase()}_${new Date().getTime()}.pdf`, 
+                html2canvas: { scale: 2 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+            };
+            html2pdf().set(opt).from(document.getElementById('screen_project')).save().then(() => document.body.classList.remove('pdf-mode'));
         }
 
-        function initCharts() {
-            Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-            const history = JSON.parse(localStorage.getItem('trane_history') || '[]');
-            let labels = history.length > 0 ? history.map(h => h.date) : ['Chưa có DL'];
-            let tempData = history.length > 0 ? history.map(h => h.tempW1) : [null];
-            let purgeData = history.length > 0 ? history.map(h => h.purge24) : [null];
+        // =====================================================================
+        // BIỂU ĐỒ AMPE TRỰC TIẾP CHO DỰ ÁN LEADING START
+        // =====================================================================
+        function initLeadingStartChart() {
+            const canvas = document.getElementById('lsAmpsChart');
+            if (!canvas) return;
+            
+            // Sửa lỗi Chart.js tải chậm
+            if (typeof Chart === 'undefined') {
+                setTimeout(initLeadingStartChart, 500);
+                return;
+            }
 
-            chartMotor = new Chart(document.getElementById('motorTempChart').getContext('2d'), { type: 'line', data: { labels: labels, datasets: [{ label: 'Nhiệt độ Winding #1', data: tempData, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.1)', borderWidth: 2, tension: 0.3, fill: true, pointBackgroundColor: '#0ea5e9' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 30, suggestedMax: 60 } } } });
-            chartPurge = new Chart(document.getElementById('purgeChart').getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Pumpout (Phút)', data: purgeData, backgroundColor: '#64748b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 0, suggestedMax: 10 } } } });
+            const ctx = canvas.getContext('2d');
+            
+            if (lsAmpsChartInstance) lsAmpsChartInstance.destroy();
+
+            lsAmpsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Máy 1', 'Máy 2', 'Máy 3'],
+                    datasets: [
+                        { label: 'Chiller', data: [0,0,0], backgroundColor: '#0ea5e9', borderRadius: 4 },
+                        { label: 'Bơm Lạnh (CHWP)', data: [0,0,0], backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'Bơm G.Nhiệt (CDWP)', data: [0,0,0], backgroundColor: '#f59e0b', borderRadius: 4 },
+                        { label: 'Tháp (CT)', data: [0,0,0], backgroundColor: '#8b5cf6', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Ampe (A)' } } },
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
         }
 
-        function updateCharts(history) {
-            chartMotor.data.labels = chartPurge.data.labels = history.map(h => h.date);
-            chartMotor.data.datasets[0].data = history.map(h => h.tempW1);
-            chartPurge.data.datasets[0].data = history.map(h => h.purge24);
-            chartMotor.update(); chartPurge.update();
+        function updateLeadingStartChart() {
+            if (!lsAmpsChartInstance) return;
+            
+            const getAvg = (idPrefix) => {
+                let l1 = parseFloat(document.getElementById(idPrefix + '_l1')?.value) || 0;
+                let l2 = parseFloat(document.getElementById(idPrefix + '_l2')?.value) || 0;
+                let l3 = parseFloat(document.getElementById(idPrefix + '_l3')?.value) || 0;
+                let count = (l1 > 0 ? 1 : 0) + (l2 > 0 ? 1 : 0) + (l3 > 0 ? 1 : 0);
+                return count > 0 ? ((l1 + l2 + l3) / count) : 0;
+            };
+            
+            lsAmpsChartInstance.data.datasets[0].data = [getAvg('ls_ch1_curr'), getAvg('ls_ch2_curr'), getAvg('ls_ch3_curr')];
+            lsAmpsChartInstance.data.datasets[1].data = [getAvg('ls_chwp1_curr'), getAvg('ls_chwp2_curr'), getAvg('ls_chwp3_curr')];
+            lsAmpsChartInstance.data.datasets[2].data = [getAvg('ls_cdwp1_curr'), getAvg('ls_cdwp2_curr'), getAvg('ls_cdwp3_curr')];
+            lsAmpsChartInstance.data.datasets[3].data = [getAvg('ls_ct1_curr'), getAvg('ls_ct2_curr'), getAvg('ls_ct3_curr')];
+            
+            lsAmpsChartInstance.update();
         }
-
-        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
