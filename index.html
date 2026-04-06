@@ -10,7 +10,7 @@
     <style>
         body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; -webkit-print-color-adjust: exact; }
         
-        /* Checkbox Styling */
+        /* CSS cho Checkbox */
         .check-container { display: flex; align-items: center; position: relative; padding-left: 35px; margin-bottom: 8px; cursor: pointer; font-size: 13px; user-select: none; min-height: 24px; }
         .check-container input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
         .checkmark { position: absolute; top: 0; left: 0; height: 22px; width: 22px; background-color: #e2e8f0; border-radius: 6px; border: 1px solid #cbd5e1; transition: all 0.2s ease; }
@@ -19,32 +19,32 @@
         .check-container input:checked ~ .checkmark:after { display: block; }
         .check-container .checkmark:after { left: 7px; top: 3px; width: 6px; height: 11px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
         
-        /* Inputs */
+        /* CSS cho Ô nhập liệu */
         .log-input { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #f8fafc; transition: all 0.2s; font-family: monospace; font-size: 14px; }
         .log-input:focus { outline: none; border-color: #0d9488; background-color: #fff; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
         .log-input-compact { width: 100%; padding: 4px; text-align: center; border: none; background: transparent; outline: none; font-family: monospace; font-size: 12px; }
         .log-input-compact:focus { background-color: #e6f6f5; }
         
-        /* Utilities */
+        /* CSS cho Thông báo Toast */
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
         #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
         
         .project-card { transition: all 0.3s ease; }
         .project-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         
-        /* Loading Spinner */
+        /* Vòng xoay Loading */
         .loading { pointer-events: none; opacity: 0.8; }
         .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Print Mode */
+        /* Chế độ In PDF */
         .pdf-mode { background-color: #ffffff; color: #000; font-size: 11px; }
         .pdf-mode .no-print { display: none !important; }
         .pdf-mode .print-only { display: flex !important; }
         .pdf-mode section { border: none !important; box-shadow: none !important; margin-bottom: 15px !important; padding: 5px !important; page-break-inside: auto !important; }
         .pdf-mode .overflow-x-auto { overflow: visible !important; }
         .pdf-mode tr { page-break-inside: avoid !important; }
-        .pdf-mode input, .pdf-mode textarea { border: none !important; border-bottom: 1px dotted #666 !important; background: transparent !important; color: #000 !important; }
+        .pdf-mode input, .pdf-mode textarea, .pdf-mode select { border: none !important; border-bottom: 1px dotted #666 !important; background: transparent !important; color: #000 !important; appearance: none; -webkit-appearance: none; }
         .pdf-mode .print-header { justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
 
         @media print {
@@ -146,8 +146,7 @@
                 </div>
             </section>
 
-            <div id="dynamic_project_content" class="space-y-6">
-                </div>
+            <div id="dynamic_project_content" class="space-y-6"></div>
 
             <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Ghi chú vận hành / Tình trạng bất thường:</label>
@@ -174,7 +173,7 @@
         let lsAmpsChartInstance = null;
 
         // =====================================================================
-        // --- HỆ THỐNG DỮ LIỆU & HÀM RENDER RIÊNG CHO NOVOTEL ---
+        // --- DỮ LIỆU & RENDER CHO NOVOTEL ---
         // =====================================================================
         const nv_parameters = [
             { id: 'p_evap_ent', group: 'Bình Bay Hơi (Evap)', name: 'Nhiệt độ nước lạnh VÀO', type: 'number', placeholder: '°C' },
@@ -536,22 +535,26 @@
                         ${renderAuxTable('CHWP', 'chwp', 3)}
                         ${renderAuxTable('CDWP', 'cdwp', 3)}
                         
-                        <div class="relative">
-                            ${renderAuxTable('CT', 'ct', 3)}
-                            <div class="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200 inline-block shadow-sm">
-                                <h3 class="font-bold text-slate-700 text-xs uppercase mb-2 flex items-center">
-                                    <span class="mr-1">⛅</span> Môi trường Tháp giải nhiệt
-                                </h3>
-                                <div class="flex items-center space-x-6">
-                                    <div class="flex items-center"><span class="text-xs font-bold text-slate-600 mr-2">Nhiệt độ NT:</span><input type="number" step="any" id="ls_env_temp" class="log-input p-1 draft-save text-center font-bold text-orange-600 text-sm w-20" placeholder="°C"></div>
-                                    <div class="flex items-center"><span class="text-xs font-bold text-slate-600 mr-2">Độ ẩm NT:</span><input type="number" step="any" id="ls_env_hum" class="log-input p-1 draft-save text-center font-bold text-blue-600 text-sm w-20" placeholder="%"></div>
+                        ${renderAuxTable('CT', 'ct', 3)}
+                        
+                        <div class="mt-4 mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg" style="page-break-inside: avoid;">
+                            <h3 class="font-bold text-slate-700 text-xs uppercase mb-3 flex items-center">
+                                <span class="mr-2">⛅</span> Môi trường Tháp giải nhiệt
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                                <div class="flex items-center border border-slate-200 bg-white p-2 rounded">
+                                    <span class="text-xs font-bold text-slate-600 mr-2 whitespace-nowrap">Nhiệt độ NT:</span>
+                                    <input type="number" step="any" id="ls_env_temp" class="log-input-compact draft-save text-center font-bold text-orange-600 text-sm flex-1" placeholder="°C">
+                                </div>
+                                <div class="flex items-center border border-slate-200 bg-white p-2 rounded">
+                                    <span class="text-xs font-bold text-slate-600 mr-2 whitespace-nowrap">Độ ẩm NT:</span>
+                                    <input type="number" step="any" id="ls_env_hum" class="log-input-compact draft-save text-center font-bold text-blue-600 text-sm flex-1" placeholder="%">
                                 </div>
                             </div>
                         </div>
                     </section>
                 `;
 
-                // Fix Chart error by ensuring Chart exists
                 if (typeof Chart !== 'undefined') {
                     setTimeout(initLeadingStartChart, 100);
                 } else {
@@ -680,7 +683,7 @@
             if(!currentProject) return;
             
             if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('DÁN_LINK')) {
-                alert("Vui lòng dán link Google Apps Script vào biến GOOGLE_APP_SCRIPT_URL trong code (Dòng 261) trước khi gửi.");
+                alert("Vui lòng dán link Google Apps Script vào biến GOOGLE_APP_SCRIPT_URL trong code (Dòng 258) trước khi gửi.");
                 return;
             }
 
@@ -689,14 +692,12 @@
             btn.innerHTML = `<span class="spinner mr-2"></span> Đang gửi...`;
             btn.classList.add('loading');
 
-            // Tạo gói dữ liệu (Payload) với cột Tên Dự Án đặt lên đầu để tiện Filter
             const payload = { 
                 Dự_Án: currentProject.toUpperCase(), 
                 Thời_Gian: document.getElementById('meta_date').value || new Date().toLocaleString('vi-VN'), 
                 Kỹ_Thuật_Viên: document.getElementById('meta_technician').value || "Chưa nhập"
             };
             
-            // Quét toàn bộ ô nhập liệu
             document.getElementById('dynamic_project_content').querySelectorAll('input, textarea, select').forEach(el => {
                 if(el.id && el.type !== 'file') {
                     payload[el.id] = el.type === 'checkbox' ? (el.checked ? "OK" : "NO") : el.value;
@@ -704,7 +705,6 @@
             });
             payload['Ghi_Chú'] = document.getElementById('meta_notes').value;
 
-            // Bắn API
             fetch(GOOGLE_APP_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -720,7 +720,7 @@
                 btn.innerHTML = originalText;
                 btn.classList.remove('loading');
                 console.error('Error:', error);
-                alert('Lỗi mạng. Vui lòng kiểm tra lại kết nối của bạn.');
+                alert('Lỗi mạng. Vui lòng kiểm tra kết nối.');
             });
         }
 
@@ -756,14 +756,12 @@
             const canvas = document.getElementById('lsAmpsChart');
             if (!canvas) return;
             
-            // Sửa lỗi Chart.js tải chậm
             if (typeof Chart === 'undefined') {
                 setTimeout(initLeadingStartChart, 500);
                 return;
             }
 
             const ctx = canvas.getContext('2d');
-            
             if (lsAmpsChartInstance) lsAmpsChartInstance.destroy();
 
             lsAmpsChartInstance = new Chart(ctx, {
@@ -780,7 +778,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Ampe (A)' } } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Ampe (A) Trung bình' } } },
                     plugins: { legend: { position: 'bottom' } }
                 }
             });
