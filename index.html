@@ -842,10 +842,7 @@
 async function sendGeminiMessage() {
          const input = document.getElementById('gemini_chat_input');
          const message = input.value.trim();
-         if(!message || GEMINI_API_KEY.includes('DÁN_API_KEY')) {
-            if(GEMINI_API_KEY.includes('DÁN_API_KEY')) alert('Vui lòng cài đặt API Key trong code trước!');
-            return;
-         }
+         if(!message) return;
  
          const history = document.getElementById('gemini_chat_history');
          history.innerHTML += `<div class="bg-white border border-slate-200 text-slate-800 p-3 rounded-lg rounded-tr-none self-end max-w-[85%] ml-auto shadow-sm">${message}</div>`;
@@ -853,13 +850,12 @@ async function sendGeminiMessage() {
          history.scrollTop = history.scrollHeight;
  
          const loadingId = 'loading_' + Date.now();
-         history.innerHTML += `<div id="${loadingId}" class="bg-blue-100 text-blue-800 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm flex items-center"><span class="spinner mr-2 border-blue-600"></span> Đang xem xét dữ liệu Sheets & Thời tiết...</div>`;
+         history.innerHTML += `<div id="${loadingId}" class="bg-blue-100 text-blue-800 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm flex items-center"><span class="spinner mr-2 border-blue-600"></span> Đang xem xét hệ thống...</div>`;
          history.scrollTop = history.scrollHeight;
 
          try {
-             let pName = currentProject ? document.getElementById('print_project_name').innerText.replace('Dự án: ', '') : "LEADING";
+             let pName = currentProject ? document.getElementById('print_project_name').innerText.replace('Dự án: ', '') : "Chưa xác định";
              
-             // 1. KÉO DỮ LIỆU THỜI TIẾT ĐÀ NẴNG
              let weatherContext = "Không có thông tin thời tiết.";
              try {
                  const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=16.0678&longitude=108.2208&current=temperature_2m,relative_humidity_2m&timezone=Asia%2FBangkok');
@@ -867,60 +863,33 @@ async function sendGeminiMessage() {
                  weatherContext = `Nhiệt độ hiện tại: ${weatherData.current.temperature_2m}°C, Độ ẩm: ${weatherData.current.relative_humidity_2m}%`;
              } catch (e) {}
 
-             // 2. KÉO LỊCH SỬ VẬN HÀNH TỪ GOOGLE SHEETS
-             let sheetContext = "Chưa có dữ liệu vận hành nào từ hệ thống.";
-             try {
-                 // GỌI ĐẾN ĐƯỜNG LINK GOOGLE SCRIPT (Nhớ đảm bảo biến GOOGLE_APP_SCRIPT_URL đã có link)
-                 const sheetRes = await fetch(GOOGLE_APP_SCRIPT_URL + "?project=" + encodeURIComponent(pName));
-                 const sheetData = await sheetRes.json();
-                 if(sheetData.status === 'success' && sheetData.data) {
-                     sheetContext = JSON.stringify(sheetData.data);
-                 }
-             } catch (e) {
-                 console.log("Lỗi đọc sheet", e);
-             }
-
-             // 3. NHỒI TOÀN BỘ NGỮ CẢNH CHO AI
+             // Nhồi ngữ cảnh cho AI
              let systemContext = `
              Bạn là Trợ lý Kỹ sư trưởng chuyên nghiệp của hệ thống HVAC.
              Dự án KTV đang trực: ${pName}
-             Thời tiết tại dự án: ${weatherContext}
+             Thời tiết tại Đà Nẵng: ${weatherContext}
              
-             DỮ LIỆU VẬN HÀNH LỊCH SỬ (3 CA GẦN NHẤT ĐƯỢC LẤY TỪ GOOGLE SHEETS):
-             ${sheetContext}
-             
-             Nhiệm vụ: 
-             - Hãy trả lời câu hỏi của KTV. 
-             - NẾU KTV hỏi về thông số, tình trạng máy, hãy nhìn vào phần "DỮ LIỆU VẬN HÀNH LỊCH SỬ" ở trên để phân tích (Ví dụ: So sánh dòng điện giữa các ca, xem nhiệt độ nước có ổn định không).
-             - Nếu thông số lịch sử cho thấy máy chạy không tải hoặc đang tắt, hãy nhắc KTV.
-             - Trả lời ngắn gọn, chuyên nghiệp, format bằng Markdown.
+             Quy định: Dòng RLA máy nén Trane > 90% cần báo động. Nhiệt độ tiếp cận ngưng tụ > 2.5 độ C cần vệ sinh.
+             Trả lời KTV bằng Markdown, chuyên môn, trực tiếp.
              
              Câu hỏi của KTV: ${message}
              `;
  
-             // 4. DÒ TÌM MODEL VÀ GỌI GEMINI API
-             if (!activeGeminiModel) {
-                 const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`);
-                 const listData = await listRes.json();
-                 const validModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('gemini'));
-                 let chosen = validModels.find(m => m.name.includes('1.5-flash')) || validModels.find(m => m.name.includes('1.5-pro')) || validModels[0];
-                 activeGeminiModel = chosen ? chosen.name.replace('models/', '') : 'gemini-1.5-flash';
-             }
- 
-             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeGeminiModel}:generateContent?key=${GEMINI_API_KEY}`, {
+             // ĐIỂM BẢO MẬT: Bắn lệnh nhờ Google Apps Script gọi Gemini hộ
+             const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
                  method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
+                 headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Dùng text/plain để tránh rào cản CORS trình duyệt
                  body: JSON.stringify({
+                     action: "chatGemini",
                      contents: [{ parts: [{ text: systemContext }] }]
                  })
              });
-             const data = await response.json();
              
+             const data = await response.json();
              document.getElementById(loadingId).remove();
              
              if(data.error) {
                  history.innerHTML += `<div class="bg-rose-100 text-rose-800 p-3 rounded-lg self-start text-xs font-mono">Lỗi API: ${data.error.message}</div>`;
-                 activeGeminiModel = ''; 
              } else {
                  let reply = data.candidates[0].content.parts[0].text;
                  reply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<i>$1</i>').replace(/\n/g, '<br>');
@@ -928,10 +897,8 @@ async function sendGeminiMessage() {
              }
          } catch (error) {
              document.getElementById(loadingId).innerText = 'Lỗi mạng. Vui lòng kiểm tra lại kết nối!';
-             activeGeminiModel = '';
          }
          history.scrollTop = history.scrollHeight;
-     }
-</script>
+     }</script>
 </body>
 </html>
